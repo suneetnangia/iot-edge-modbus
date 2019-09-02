@@ -31,11 +31,11 @@
         #endregion
 
         #region Public Methods
-        public abstract void ReleaseSession();
+        public abstract Task ReleaseSessionAsync();
 
-        public async Task InitSession()
+        public async Task InitSessionAsync()
         {
-            await this.ConnectSlave();
+            await this.ConnectSlaveAsync();
 
             foreach (var op_pair in this.config.Operations)
             {
@@ -56,7 +56,7 @@
 
             this.EncodeWrite(writeRequest, uid, readOperation, value);
 
-            writeResponse = await this.SendRequest(writeRequest, reqLen);
+            writeResponse = await this.SendRequestAsync(writeRequest, reqLen);
         }
         public void ProcessOperations()
         {
@@ -64,7 +64,7 @@
             foreach (var op_pair in this.config.Operations)
             {
                 ReadOperation x = op_pair.Value;
-                Task t = Task.Run(async () => await this.SingleOperation(x));
+                Task t = Task.Run(async () => await this.SingleOperationAsync(x));
                 this.m_taskList.Add(t);
             }
         }
@@ -72,9 +72,9 @@
         {
             return this.OutMessage;
         }
-        public void ClearOutMessage()
+        public async Task ClearOutMessageAsync()
         {
-            this.m_semaphore_collection.Wait();
+            await this.m_semaphore_collection.WaitAsync();
 
             this.OutMessage = null;
 
@@ -84,21 +84,21 @@
 
         #region Protected Methods
         protected abstract void EncodeWrite(byte[] request, string uid, ReadOperation readOperation, string value);
-        protected abstract Task<byte[]> SendRequest(byte[] request, int reqLen);
-        protected abstract Task ConnectSlave();
+        protected abstract Task<byte[]> SendRequestAsync(byte[] request, int reqLen);
+        protected abstract Task ConnectSlaveAsync();
         protected abstract void EncodeRead(ReadOperation operation);
-        protected async Task SingleOperation(ReadOperation x)
+        protected async Task SingleOperationAsync(ReadOperation x)
         {
             while (this.m_run)
             {
                 x.Response = null;
-                x.Response = await this.SendRequest(x.Request, x.RequestLen);
+                x.Response = await this.SendRequestAsync(x.Request, x.RequestLen);
 
                 if (x.Response != null)
                 {
                     if (x.Request[this.m_dataBodyOffset] == x.Response[this.m_dataBodyOffset])
                     {
-                        this.ProcessResponse(this.config, x);
+                        await this.ProcessResponseAsync(this.config, x);
                     }
                     else if (x.Request[this.m_dataBodyOffset] + ModbusExceptionCode == x.Response[this.m_dataBodyOffset])
                     {
@@ -108,7 +108,7 @@
                 await Task.Delay(x.PollingInterval - this.m_silent);
             }
         }
-        protected void ProcessResponse(ModbusSlaveConfig config, ReadOperation x)
+        protected async Task ProcessResponseAsync(ModbusSlaveConfig config, ReadOperation x)
         {
             int count = 0;
             int step_size = 0;
@@ -159,12 +159,12 @@
 
             if (value_list.Count > 0)
             {
-                this.PrepareOutMessage(config.HwId, x.CorrelationId, value_list);
+                await this.PrepareOutMessageAsync(config.HwId, x.CorrelationId, value_list);
             }
         }
-        protected void PrepareOutMessage(string HwId, string CorrelationId, List<ModbusOutValue> ValueList)
+        protected async Task PrepareOutMessageAsync(string HwId, string CorrelationId, List<ModbusOutValue> ValueList)
         {
-            this.m_semaphore_collection.Wait();
+            await this.m_semaphore_collection.WaitAsync();
             ModbusOutContent content = null;
             if (this.OutMessage == null)
             {
@@ -206,10 +206,10 @@
             this.m_semaphore_collection.Release();
 
         }
-        protected void ReleaseOperations()
+        protected async Task ReleaseOperationsAsync()
         {
             this.m_run = false;
-            Task.WaitAll(this.m_taskList.ToArray());
+            await Task.WhenAll(this.m_taskList);
             this.m_taskList.Clear();
         }
         #endregion

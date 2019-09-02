@@ -25,7 +25,7 @@
                             }
 
                             ModbusSlaveSession slave = new ModbusTCPSlaveSession(slaveConfig);
-                            await slave.InitSession();
+                            await slave.InitSessionAsync();
                             sessionsHandle.ModbusSessionList.Add(slave);
                             break;
                         }
@@ -37,7 +37,7 @@
                             }
 
                             ModbusSlaveSession slave = new ModbusRTUSlaveSession(slaveConfig);
-                            await slave.InitSession();
+                            await slave.InitSessionAsync();
                             sessionsHandle.ModbusSessionList.Add(slave);
                             break;
                         }
@@ -64,7 +64,7 @@
         {
             foreach (var session in this.ModbusSessionList)
             {
-                session.ReleaseSession();
+                session.ReleaseSessionAsync();
             }
             this.ModbusSessionList.Clear();
         }
@@ -78,7 +78,7 @@
                 if (obj != null)
                 {
                     obj_list.Add(obj);
-                    session.ClearOutMessage();
+                    session.ClearOutMessageAsync();
                 }
             }
             return obj_list;
@@ -113,7 +113,7 @@
                         }
                     }
 
-                    session.ClearOutMessage();
+                    session.ClearOutMessageAsync();
                 }
             }
 

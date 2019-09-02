@@ -29,9 +29,9 @@
         #endregion
 
         #region Public Methods
-        public override void ReleaseSession()
+        public override async Task ReleaseSessionAsync()
         {
-            this.ReleaseOperations();
+            await this.ReleaseOperationsAsync();
             if (this.m_socket != null)
             {
                 this.m_socket.Disconnect(false);
@@ -42,7 +42,7 @@
         #endregion
 
         #region Protected Methods
-        protected override async Task ConnectSlave()
+        protected override async Task ConnectSlaveAsync()
         {
             if (IPAddress.TryParse(this.config.SlaveConnection, out this.m_address))
             {
@@ -129,7 +129,7 @@
                 request[this.m_dataBodyOffset + 4] = val_byte[1];
             }
         }
-        protected override async Task<byte[]> SendRequest(byte[] request, int reqLen)
+        protected override async Task<byte[]> SendRequestAsync(byte[] request, int reqLen)
         {
             byte[] response = null;
             byte[] garbage = new byte[m_bufSize];
@@ -139,7 +139,7 @@
             while (!sendSucceed && retryForSocketError < this.config.RetryCount)
             {
                 retryForSocketError++;
-                this.m_semaphore_connection.Wait();
+                await this.m_semaphore_connection.WaitAsync();
 
                 if (this.m_socket != null && this.m_socket.Connected)
                 {
@@ -164,7 +164,7 @@
                         this.m_socket.Send(request, reqLen, SocketFlags.None);
 
                         // read response
-                        response = this.ReadResponse();
+                        response = await this.ReadResponseAsync();
                         sendSucceed = true;
                     }
                     catch (Exception e)
@@ -175,13 +175,13 @@
                         this.m_socket.Dispose();
                         this.m_socket = null;
                         Console.WriteLine("Connection lost, reconnecting...");
-                        await this.ConnectSlave();
+                        await this.ConnectSlaveAsync();
                     }
                 }
                 else
                 {
                     Console.WriteLine("Connection lost, reconnecting...");
-                    await this.ConnectSlave();
+                    await this.ConnectSlaveAsync();
                 }
 
                 this.m_semaphore_connection.Release();
@@ -192,7 +192,7 @@
         #endregion
 
         #region Private Methods
-        private byte[] ReadResponse()
+        private async Task<byte[]> ReadResponseAsync()
         {
             byte[] response = new byte[m_bufSize];
             int header_len = 0;
@@ -205,7 +205,7 @@
             while (this.m_socket.Available <= 0 && retry < this.config.RetryCount)
             {
                 retry++;
-                Task.Delay(this.config.RetryInterval.Value).Wait();
+                await Task.Delay(this.config.RetryInterval.Value);
             }
 
             while (header_len < this.m_dataBodyOffset && retry < this.config.RetryCount)

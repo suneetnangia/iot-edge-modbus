@@ -29,9 +29,9 @@
         #endregion
 
         #region Public Methods
-        public override void ReleaseSession()
+        public override async Task ReleaseSessionAsync()
         {
-            this.ReleaseOperations();
+            await this.ReleaseOperationsAsync();
             if (this.m_serialPort != null)
             {
                 this.m_serialPort.Dispose();
@@ -41,7 +41,7 @@
         #endregion
 
         #region Private Methods
-        protected override async Task ConnectSlave()
+        protected override async Task ConnectSlaveAsync()
         {
             if (this.config.SlaveConnection.Substring(0, 3) == "COM" || this.config.SlaveConnection.Substring(0, 8) == "/dev/tty")
             {
@@ -121,12 +121,12 @@
                 request[this.m_dataBodyOffset + 6] = crc_byte[1];
             }
         }
-        protected override async Task<byte[]> SendRequest(byte[] request, int reqLen)
+        protected override async Task<byte[]> SendRequestAsync(byte[] request, int reqLen)
         {
             //double slient_interval = 1000 * 5 * ((double)1 / (double)config.BaudRate);
             byte[] response = null;
 
-            this.m_semaphore_connection.Wait();
+            await this.m_semaphore_connection.WaitAsync();
 
             if (this.m_serialPort != null && this.m_serialPort.IsOpen())
             {
@@ -134,9 +134,9 @@
                 {
                     this.m_serialPort.DiscardInBuffer();
                     this.m_serialPort.DiscardOutBuffer();
-                    Task.Delay(this.m_silent).Wait();
+                    await Task.Delay(this.m_silent);
                     this.m_serialPort.Write(request, 0, reqLen);
-                    response = this.ReadResponse();
+                    response = await this.ReadResponseAsync();
                 }
                 catch (Exception e)
                 {
@@ -145,20 +145,20 @@
                     this.m_serialPort.Dispose();
                     this.m_serialPort = null;
                     Console.WriteLine("Connection lost, reconnecting...");
-                    await this.ConnectSlave();
+                    await this.ConnectSlaveAsync();
                 }
             }
             else
             {
                 Console.WriteLine("Connection lost, reconnecting...");
-                await this.ConnectSlave();
+                await this.ConnectSlaveAsync();
             }
 
             this.m_semaphore_connection.Release();
 
             return response;
         }
-        private byte[] ReadResponse()
+        private async Task<byte[]> ReadResponseAsync()
         {
             byte[] response = new byte[m_bufSize];
             int header_len = 0;
@@ -177,7 +177,7 @@
                 else
                 {
                     retry++;
-                    Task.Delay(this.config.RetryInterval.Value).Wait();
+                    await Task.Delay(this.config.RetryInterval.Value);
                 }
             }
 
@@ -192,7 +192,7 @@
                 else
                 {
                     retry++;
-                    Task.Delay(this.config.RetryInterval.Value).Wait();
+                    await Task.Delay(this.config.RetryInterval.Value);
                 }
             }
 
