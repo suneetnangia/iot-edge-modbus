@@ -1,7 +1,10 @@
-﻿namespace AzureIoTEdgeModbus.Slave
+﻿
+using System;
+using System.Net;
+
+namespace AzureIoTEdgeModbus.Slave
 {
-    using System;
-    using System.Net;
+
     using System.Net.Sockets;
     using System.Threading.Tasks;
 
@@ -31,7 +34,7 @@
         #region Public Methods
         public override async Task ReleaseSessionAsync()
         {
-            await this.ReleaseOperationsAsync();
+            await this.ReleaseOperationsAsync().ConfigureAwait(false);
             if (this.m_socket != null)
             {
                 this.m_socket.Disconnect(false);
@@ -53,7 +56,7 @@
                         ReceiveTimeout = 100
                     };
 
-                    await this.m_socket.ConnectAsync(this.m_address, this.config.TcpPort.Value);
+                    await this.m_socket.ConnectAsync(this.m_address, this.config.TcpPort.Value).ConfigureAwait(false);
 
                 }
                 catch (SocketException se)
@@ -66,6 +69,11 @@
         }
         protected override void EncodeRead(ReadOperation operation)
         {
+            if (operation == null)
+            {
+                throw new ArgumentNullException(nameof(operation));
+            }
+
             //MBAP
             //transaction id 2 bytes
             operation.Request[0] = 0;
@@ -94,6 +102,16 @@
         }
         protected override void EncodeWrite(byte[] request, string uid, ReadOperation readOperation, string value)
         {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            if (readOperation == null)
+            {
+                throw new ArgumentNullException(nameof(readOperation));
+            }
+
             //MBAP
             //transaction id 2 bytes
             request[0] = 0;
@@ -139,7 +157,7 @@
             while (!sendSucceed && retryForSocketError < this.config.RetryCount)
             {
                 retryForSocketError++;
-                await this.m_semaphore_connection.WaitAsync();
+                await this.m_semaphore_connection.WaitAsync().ConfigureAwait(false);
 
                 if (this.m_socket != null && this.m_socket.Connected)
                 {
@@ -164,7 +182,7 @@
                         this.m_socket.Send(request, reqLen, SocketFlags.None);
 
                         // read response
-                        response = await this.ReadResponseAsync();
+                        response = await this.ReadResponseAsync().ConfigureAwait(false);
                         sendSucceed = true;
                     }
                     catch (Exception e)
@@ -175,13 +193,13 @@
                         this.m_socket.Dispose();
                         this.m_socket = null;
                         Console.WriteLine("Connection lost, reconnecting...");
-                        await this.ConnectSlaveAsync();
+                        await this.ConnectSlaveAsync().ConfigureAwait(false);
                     }
                 }
                 else
                 {
                     Console.WriteLine("Connection lost, reconnecting...");
-                    await this.ConnectSlaveAsync();
+                    await this.ConnectSlaveAsync().ConfigureAwait(false);
                 }
 
                 this.m_semaphore_connection.Release();
@@ -205,7 +223,7 @@
             while (this.m_socket.Available <= 0 && retry < this.config.RetryCount)
             {
                 retry++;
-                await Task.Delay(this.config.RetryInterval.Value);
+                await Task.Delay(this.config.RetryInterval.Value).ConfigureAwait(false);
             }
 
             while (header_len < this.m_dataBodyOffset && retry < this.config.RetryCount)

@@ -35,7 +35,7 @@
 
         public async Task InitSessionAsync()
         {
-            await this.ConnectSlaveAsync();
+            await this.ConnectSlaveAsync().ConfigureAwait(false);
 
             foreach (var op_pair in this.config.Operations)
             {
@@ -56,7 +56,7 @@
 
             this.EncodeWrite(writeRequest, uid, readOperation, value);
 
-            writeResponse = await this.SendRequestAsync(writeRequest, reqLen);
+            writeResponse = await this.SendRequestAsync(writeRequest, reqLen).ConfigureAwait(false);
         }
         public void ProcessOperations()
         {
@@ -64,7 +64,7 @@
             foreach (var op_pair in this.config.Operations)
             {
                 ReadOperation x = op_pair.Value;
-                Task t = Task.Run(async () => await this.SingleOperationAsync(x));
+                Task t = Task.Run(() => this.SingleOperationAsync(x));
                 this.m_taskList.Add(t);
             }
         }
@@ -74,7 +74,7 @@
         }
         public async Task ClearOutMessageAsync()
         {
-            await this.m_semaphore_collection.WaitAsync();
+            await this.m_semaphore_collection.WaitAsync().ConfigureAwait(false);
 
             this.OutMessage = null;
 
@@ -92,20 +92,20 @@
             while (this.m_run)
             {
                 x.Response = null;
-                x.Response = await this.SendRequestAsync(x.Request, x.RequestLen);
+                x.Response = await this.SendRequestAsync(x.Request, x.RequestLen).ConfigureAwait(false);
 
                 if (x.Response != null)
                 {
                     if (x.Request[this.m_dataBodyOffset] == x.Response[this.m_dataBodyOffset])
                     {
-                        await this.ProcessResponseAsync(this.config, x);
+                        await this.ProcessResponseAsync(this.config, x).ConfigureAwait(false);
                     }
                     else if (x.Request[this.m_dataBodyOffset] + ModbusExceptionCode == x.Response[this.m_dataBodyOffset])
                     {
                         Console.WriteLine($"Modbus exception code: {x.Response[this.m_dataBodyOffset + 1]}");
                     }
                 }
-                await Task.Delay(x.PollingInterval - this.m_silent);
+                await Task.Delay(x.PollingInterval - this.m_silent).ConfigureAwait(false);
             }
         }
         protected async Task ProcessResponseAsync(ModbusSlaveConfig config, ReadOperation x)
@@ -164,7 +164,7 @@
         }
         protected async Task PrepareOutMessageAsync(string HwId, string CorrelationId, List<ModbusOutValue> ValueList)
         {
-            await this.m_semaphore_collection.WaitAsync();
+            await this.m_semaphore_collection.WaitAsync().ConfigureAwait(false);
             ModbusOutContent content = null;
             if (this.OutMessage == null)
             {
@@ -209,7 +209,7 @@
         protected async Task ReleaseOperationsAsync()
         {
             this.m_run = false;
-            await Task.WhenAll(this.m_taskList);
+            await Task.WhenAll(this.m_taskList).ConfigureAwait(false);
             this.m_taskList.Clear();
         }
         #endregion

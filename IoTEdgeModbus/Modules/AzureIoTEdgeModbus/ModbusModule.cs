@@ -9,6 +9,7 @@
     using Newtonsoft.Json;
 
     using System;
+    using System.Diagnostics;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -44,6 +45,7 @@
 
             // Open connections to slaves.
             this.Logger.LogInformation($"Initialising new sessions with twin's desired properties...");
+            
             this.startTask = this.StartAsync(await sessionsHandle.CreateHandleFromConfiguration(config).ConfigureAwait(false), config.PublishInterval);
         }
 
@@ -77,7 +79,7 @@
 
             while (this.sessionsRun)
             {
-                var result = sessionsHandle.CollectAndResetOutMessageFromSessions();
+                var result = await sessionsHandle.CollectAndResetOutMessageFromSessionsAsync();
 
                 if (result.Count > 0)
                 {

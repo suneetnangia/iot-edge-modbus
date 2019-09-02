@@ -68,7 +68,7 @@
             }
             this.ModbusSessionList.Clear();
         }
-        public List<object> CollectAndResetOutMessageFromSessions()
+        public async Task<List<object>> CollectAndResetOutMessageFromSessionsAsync()
         {
             List<object> obj_list = new List<object>();
 
@@ -78,45 +78,9 @@
                 if (obj != null)
                 {
                     obj_list.Add(obj);
-                    session.ClearOutMessageAsync();
+                    await session.ClearOutMessageAsync();
                 }
             }
-            return obj_list;
-        }
-        public List<object> CollectAndResetOutMessageFromSessionsV1()
-        {
-            List<object> obj_list = new List<object>();
-
-            foreach (ModbusSlaveSession session in this.ModbusSessionList)
-            {
-                var obj = session.GetOutMessage();
-                if (obj != null)
-                {
-                    var content = (obj as ModbusOutContent);
-
-                    string hwId = content.HwId;
-
-                    foreach (var data in content.Data)
-                    {
-                        var sourceTimestamp = data.SourceTimestamp;
-
-                        foreach (var value in data.Values)
-                        {
-                            obj_list.Add(new ModbusOutMessageV1
-                            {
-                                HwId = hwId,
-                                SourceTimestamp = sourceTimestamp,
-                                Address = value.Address,
-                                DisplayName = value.DisplayName,
-                                Value = value.Value,
-                            });
-                        }
-                    }
-
-                    session.ClearOutMessageAsync();
-                }
-            }
-
             return obj_list;
         }
     }
