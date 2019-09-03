@@ -31,7 +31,7 @@
         #region Public Methods
         public override async Task ReleaseSessionAsync()
         {
-            await this.ReleaseOperationsAsync();
+            await this.ReleaseOperationsAsync().ConfigureAwait(false); ;
             if (this.m_serialPort != null)
             {
                 this.m_serialPort.Dispose();
@@ -53,7 +53,7 @@
 
                     this.m_serialPort.Open();
                     //m_serialPort.DataReceived += new SerialDataReceivedEventHandler(sp_DataReceived);
-                    await Task.Delay(2000); //Wait target to be ready to write the modbus package
+                    await Task.Delay(2000).ConfigureAwait(false); ; //Wait target to be ready to write the modbus package
                 }
                 catch (Exception e)
                 {
@@ -91,6 +91,11 @@
 
         protected override void EncodeWrite(byte[] request, string uid, ReadOperation readOperation, string value)
         {
+            if (readOperation == null)
+            {
+                throw new ArgumentNullException(nameof(readOperation));
+            }
+
             //uid
             request[0] = Convert.ToByte(uid);
 
@@ -126,7 +131,7 @@
             //double slient_interval = 1000 * 5 * ((double)1 / (double)config.BaudRate);
             byte[] response = null;
 
-            await this.m_semaphore_connection.WaitAsync();
+            await this.m_semaphore_connection.WaitAsync().ConfigureAwait(false); ;
 
             if (this.m_serialPort != null && this.m_serialPort.IsOpen())
             {
@@ -134,9 +139,9 @@
                 {
                     this.m_serialPort.DiscardInBuffer();
                     this.m_serialPort.DiscardOutBuffer();
-                    await Task.Delay(this.m_silent);
+                    await Task.Delay(this.m_silent).ConfigureAwait(false); ;
                     this.m_serialPort.Write(request, 0, reqLen);
-                    response = await this.ReadResponseAsync();
+                    response = await this.ReadResponseAsync().ConfigureAwait(false); ;
                 }
                 catch (Exception e)
                 {
@@ -145,13 +150,13 @@
                     this.m_serialPort.Dispose();
                     this.m_serialPort = null;
                     Console.WriteLine("Connection lost, reconnecting...");
-                    await this.ConnectSlaveAsync();
+                    await this.ConnectSlaveAsync().ConfigureAwait(false); ;
                 }
             }
             else
             {
                 Console.WriteLine("Connection lost, reconnecting...");
-                await this.ConnectSlaveAsync();
+                await this.ConnectSlaveAsync().ConfigureAwait(false); ;
             }
 
             this.m_semaphore_connection.Release();
@@ -177,7 +182,7 @@
                 else
                 {
                     retry++;
-                    await Task.Delay(this.config.RetryInterval.Value);
+                    await Task.Delay(this.config.RetryInterval.Value).ConfigureAwait(false);
                 }
             }
 
@@ -192,7 +197,7 @@
                 else
                 {
                     retry++;
-                    await Task.Delay(this.config.RetryInterval.Value);
+                    await Task.Delay(this.config.RetryInterval.Value).ConfigureAwait(false); ;
                 }
             }
 

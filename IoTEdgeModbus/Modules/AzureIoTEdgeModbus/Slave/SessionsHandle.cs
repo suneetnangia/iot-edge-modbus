@@ -1,5 +1,6 @@
 ﻿namespace AzureIoTEdgeModbus.Slave
 {
+    using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
 
@@ -10,6 +11,11 @@
     {
         public async Task<SessionsHandle> CreateHandleFromConfiguration(ModuleConfig config)
         {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
             SessionsHandle sessionsHandle = null;
             foreach (var config_pair in config.SlaveConfigs)
             {
@@ -25,7 +31,7 @@
                             }
 
                             ModbusSlaveSession slave = new ModbusTCPSlaveSession(slaveConfig);
-                            await slave.InitSessionAsync();
+                            await slave.InitSessionAsync().ConfigureAwait(false);
                             sessionsHandle.ModbusSessionList.Add(slave);
                             break;
                         }
@@ -37,7 +43,7 @@
                             }
 
                             ModbusSlaveSession slave = new ModbusRTUSlaveSession(slaveConfig);
-                            await slave.InitSessionAsync();
+                            await slave.InitSessionAsync().ConfigureAwait(false); ;
                             sessionsHandle.ModbusSessionList.Add(slave);
                             break;
                         }
@@ -78,7 +84,7 @@
                 if (obj != null)
                 {
                     obj_list.Add(obj);
-                    await session.ClearOutMessageAsync();
+                    await session.ClearOutMessageAsync().ConfigureAwait(false); ;
                 }
             }
             return obj_list;

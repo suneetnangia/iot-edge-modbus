@@ -87,29 +87,44 @@
         protected abstract Task<byte[]> SendRequestAsync(byte[] request, int reqLen);
         protected abstract Task ConnectSlaveAsync();
         protected abstract void EncodeRead(ReadOperation operation);
-        protected async Task SingleOperationAsync(ReadOperation x)
+        protected async Task SingleOperationAsync(ReadOperation operation)
         {
+            if (operation == null)
+            {
+                throw new ArgumentNullException(nameof(operation));
+            }
+
             while (this.m_run)
             {
-                x.Response = null;
-                x.Response = await this.SendRequestAsync(x.Request, x.RequestLen).ConfigureAwait(false);
+                operation.Response = null;
+                operation.Response = await this.SendRequestAsync(operation.Request, operation.RequestLen).ConfigureAwait(false);
 
-                if (x.Response != null)
+                if (operation.Response != null)
                 {
-                    if (x.Request[this.m_dataBodyOffset] == x.Response[this.m_dataBodyOffset])
+                    if (operation.Request[this.m_dataBodyOffset] == operation.Response[this.m_dataBodyOffset])
                     {
-                        await this.ProcessResponseAsync(this.config, x).ConfigureAwait(false);
+                        await this.ProcessResponseAsync(this.config, operation).ConfigureAwait(false);
                     }
-                    else if (x.Request[this.m_dataBodyOffset] + ModbusExceptionCode == x.Response[this.m_dataBodyOffset])
+                    else if (operation.Request[this.m_dataBodyOffset] + ModbusExceptionCode == operation.Response[this.m_dataBodyOffset])
                     {
-                        Console.WriteLine($"Modbus exception code: {x.Response[this.m_dataBodyOffset + 1]}");
+                        Console.WriteLine($"Modbus exception code: {operation.Response[this.m_dataBodyOffset + 1]}");
                     }
                 }
-                await Task.Delay(x.PollingInterval - this.m_silent).ConfigureAwait(false);
+                await Task.Delay(operation.PollingInterval - this.m_silent).ConfigureAwait(false);
             }
         }
         protected async Task ProcessResponseAsync(ModbusSlaveConfig config, ReadOperation x)
         {
+            if (x == null)
+            {
+                throw new ArgumentNullException(nameof(x));
+            }
+
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
             int count = 0;
             int step_size = 0;
             int start_digit = 0;
@@ -159,7 +174,7 @@
 
             if (value_list.Count > 0)
             {
-                await this.PrepareOutMessageAsync(config.HwId, x.CorrelationId, value_list);
+                await this.PrepareOutMessageAsync(config.HwId, x.CorrelationId, value_list).ConfigureAwait(false); ;
             }
         }
         protected async Task PrepareOutMessageAsync(string HwId, string CorrelationId, List<ModbusOutValue> ValueList)

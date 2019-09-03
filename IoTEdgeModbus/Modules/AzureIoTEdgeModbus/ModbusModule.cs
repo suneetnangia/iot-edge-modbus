@@ -79,7 +79,7 @@
 
             while (this.sessionsRun)
             {
-                var result = await sessionsHandle.CollectAndResetOutMessageFromSessionsAsync();
+                var result = await sessionsHandle.CollectAndResetOutMessageFromSessionsAsync().ConfigureAwait(false); ;
 
                 if (result.Count > 0)
                 {
